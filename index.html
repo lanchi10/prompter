@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>טלפרומפטר</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;800&display=swap');
+
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #2ecc71;
+            --background-color: #f5f5f5;
+            --text-color: #333;
+            --input-background: #fff;
+            --input-border: #ddd;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Assistant', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        #editor, #prompter {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        #editor {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #editorContent {
+            width: 100%;
+            max-width: 800px;
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        #title {
+            text-align: center;
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+
+        #textInput {
+            width: 100%;
+            height: 200px;
+            font-size: 16px;
+            border: 1px solid var(--input-border);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 20px;
+            resize: vertical;
+        }
+
+        #controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .icon-button, input[type="color"], input[type="number"] {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .icon-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .control-item span {
+            font-size: 12px;
+        }
+
+        #startButton {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 30px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 30px;
+            width: 200px;
+        }
+
+        #startButton:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        #prompter {
+            display: none;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #prompterText {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-weight: 800;
+            font-size: 48px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        #speedIndicator, #fontSizeIndicator, #wordsPerLineIndicator {
+            position: fixed;
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.5);
+            padding: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+        }
+
+        #speedIndicator { top: 10px; left: 10px; }
+        #fontSizeIndicator { top: 10px; right: 10px; }
+        #wordsPerLineIndicator { bottom: 10px; left: 10px; }
+
+        #exitButton {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+        }
+
+        #scrollControls {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+        }
+
+        .scroll-control-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 5px;
+        }
+
+        .scroll-control-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 600px) {
+            #editorContent { padding: 20px; }
+            #controls { gap: 10px; }
+            .icon-button, input[type="color"], input[type="number"] { width: 35px; height: 35px; font-size: 16px; }
+            .control-item span { font-size: 10px; }
+            #prompterText { font-size: 36px; }
+            #speedIndicator, #fontSizeIndicator, #wordsPerLineIndicator { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="editor">
+        <div id="editorContent">
+            <h1 id="title">טלפרומפטר</h1>
+            <textarea id="textInput" placeholder="הכנס טקסט כאן או טען קובץ"></textarea>
+            <div id="controls">
+                <div class="control-item" title="טען טקסט">
+                    <label for="fileInputElement" class="icon-button">
+                        <i class="fas fa-file-upload"></i>
+                    </label>
+                    <input type="file" id="fileInputElement" accept=".txt,.pdf" style="display: none;">
+                    <span>טען</span>
+                </div>
+                <div class="control-item" title="גודל טקסט">
+                    <input type="number" id="fontSizeInput" min="12" max="96" value="48">
+                    <span>גודל</span>
+                </div>
+                <div class="control-item" title="צבע טקסט">
+                    <input type="color" id="textColor" value="#ffffff">
+                    <span>צבע טקסט</span>
+                </div>
+                <div class="control-item" title="צבע רקע">
+                    <input type="color" id="backgroundColor" value="#000000">
+                    <span>צבע רקע</span>
+                </div>
+                <div class="control-item" title="מילים בשורה">
+                    <input type="number" id="wordsPerLineInput" min="1" max="10" value="4">
+                    <span>מילים בשורה</span>
+                </div>
+                <div class="control-item" title="שמור טקסט">
+                    <button id="saveButton" class="icon-button"><i class="fas fa-save"></i></button>
+                    <span>שמור</span>
+                </div>
+                <div class="control-item" title="מחק טקסט שמור">
+                    <button id="clearStorageButton" class="icon-button"><i class="fas fa-trash"></i></button>
+                    <span>מחק</span>
+                </div>
+            </div>
+            <button id="startButton">הצג</button>
+        </div>
+    </div>
+
+    <div id="prompter">
+        <div id="prompterText"></div>
+        <div id="scrollControls">
+            <button id="increaseSpeedButton" class="scroll-control-button">הגבר קצב</button>
+            <button id="decreaseSpeedButton" class="scroll-control-button">האט קצב</button>
+            <button id="stopButton" class="scroll-control-button">עצור</button>
+        </div>
+        <div id="speedIndicator">1</div>
+        <div id="fontSizeIndicator">48px</div>
+        <div id="wordsPerLineIndicator">4 מילים בשורה</div>
+        <button id="exitButton" class="icon-button">X</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const elements = {
+                editor: document.getElementById('editor'),
+                prompter: document.getElementById('prompter'),
+                textInput: document.getElementById('textInput'),
+                fileInput: document.getElementById('fileInputElement'),
+                startButton: document.getElementById('startButton'),
+                prompterText: document.getElementById('prompterText'),
+                speedIndicator: document.getElementById('speedIndicator'),
+                fontSizeIndicator: document.getElementById('fontSizeIndicator'),
+                wordsPerLineIndicator: document.getElementById('wordsPerLineIndicator'),
+                textColorInput: document.getElementById('textColor'),
+                backgroundColorInput: document.getElementById('backgroundColor'),
+                saveButton: document.getElementById('saveButton'),
+                fontSizeInput: document.getElementById('fontSizeInput'),
+                wordsPerLineInput: document.getElementById('wordsPerLineInput'),
+                clearStorageButton: document.getElementById('clearStorageButton'),
+                exitButton: document.getElementById('exitButton'),
+                increaseSpeedButton: document.getElementById('increaseSpeedButton'),
+                decreaseSpeedButton: document.getElementById('decreaseSpeedButton'),
+                stopButton: document.getElementById('stopButton')
+            };
+
+            let state = {
+                scrollSpeed: 1,
+                fontSize: 48,
+                wordsPerLine: 4,
+                currentPosition: 0,
+                scrolling: true
+            };
+
+            let scrollInterval;
+
+            function addEventListeners() {
+                elements.startButton.addEventListener('click', startPrompter);
+                elements.fileInput.addEventListener('change', handleFileUpload);
+                elements.textColorInput.addEventListener('change', updateColors);
+                elements.backgroundColorInput.addEventListener('change', updateColors);
+                elements.saveButton.addEventListener('click', saveText);
+                elements.fontSizeInput.addEventListener('input', () => updateFontSize(parseInt(elements.fontSizeInput.value, 10)));
+                elements.wordsPerLineInput.addEventListener('input', () => updateWordsPerLine(parseInt(elements.wordsPerLineInput.value, 10)));
+                elements.clearStorageButton.addEventListener('click', clearLocalStorage);
+                elements.exitButton.addEventListener('click', stopPrompter);
+                elements.increaseSpeedButton.addEventListener('click', increaseSpeed);
+                elements.decreaseSpeedButton.addEventListener('click', decreaseSpeed);
+                elements.stopButton.addEventListener('click', toggleScrolling);
+
+                const savedText = localStorage.getItem('teleprompterText');
+                if (savedText) elements.textInput.value = savedText;
+            }
+
+            function startPrompter() {
+                elements.editor.style.display = 'none';
+                elements.prompter.style.display = 'block';
+                updatePrompterText();
+                updateFontSize(parseInt(elements.fontSizeInput.value, 10));
+                updateWordsPerLine(parseInt(elements.wordsPerLineInput.value, 10));
+                state.scrollSpeed = 1;
+                updateSpeedIndicator();
+                updateColors();
+                updateScrolling();
+            }
+
+            function stopPrompter() {
+                elements.editor.style.display = 'flex';
+                elements.prompter.style.display = 'none';
+                clearInterval(scrollInterval);
+                state.currentPosition = 0;
+                elements.prompterText.style.transform = 'translateY(0)';
+            }
+
+            function updatePrompterText() {
+                const words = elements.textInput.value.split(' ');
+                const formattedText = words.reduce((acc, word, idx) => {
+                    acc += word + (idx % state.wordsPerLine === state.wordsPerLine - 1 ? '\n' : ' ');
+                    return acc;
+                }, '');
+                elements.prompterText.innerText = formattedText;
+            }
+
+            function handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        elements.textInput.value = e.target.result;
+                    };
+                    reader.readAsText(file);
+                }
+            }
+
+            function updateFontSize(newSize) {
+                state.fontSize = newSize;
+                elements.prompterText.style.fontSize = `${newSize}px`;
+                elements.fontSizeIndicator.innerText = `${newSize}px`;
+            }
+
+            function updateWordsPerLine(newWordsPerLine) {
+                state.wordsPerLine = newWordsPerLine;
+                elements.wordsPerLineIndicator.innerText = `${newWordsPerLine} מילים בשורה`;
+                updatePrompterText();
+            }
+
+            function updateColors() {
+                elements.prompterText.style.color = elements.textColorInput.value;
+                elements.prompter.style.backgroundColor = elements.backgroundColorInput.value;
+            }
+
+            function saveText() {
+                localStorage.setItem('teleprompterText', elements.textInput.value);
+                alert('הטקסט נשמר');
+            }
+
+            function clearLocalStorage() {
+                localStorage.removeItem('teleprompterText');
+                elements.textInput.value = '';
+                alert('הטקסט נמחק');
+            }
+
+            function updateScrolling() {
+                clearInterval(scrollInterval);
+                if (state.scrolling) {
+                    scrollInterval = setInterval(() => {
+                        state.currentPosition += state.scrollSpeed;
+                        elements.prompterText.style.transform = `translateY(-${state.currentPosition}px)`;
+                    }, 50);
+                }
+            }
+
+            function updateSpeedIndicator() {
+                elements.speedIndicator.innerText = state.scrollSpeed;
+            }
+
+            function increaseSpeed() {
+                state.scrollSpeed += 1;
+                updateSpeedIndicator();
+            }
+
+            function decreaseSpeed() {
+                state.scrollSpeed = Math.max(1, state.scrollSpeed - 1);
+                updateSpeedIndicator();
+            }
+
+            function toggleScrolling() {
+                state.scrolling = !state.scrolling;
+                if (state.scrolling) {
+                    updateScrolling();
+                } else {
+                    clearInterval(scrollInterval);
+                }
+            }
+
+            addEventListeners();
+        });
+    </script>
+</body>
+</html>
