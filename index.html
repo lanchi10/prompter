@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>טלפרומפטר</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0-beta3/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;800&display=swap');
 
@@ -148,25 +148,6 @@
             color: #999;
         }
 
-        .note-trigger {
-            color: blue;
-            cursor: pointer;
-            text-decoration: underline;
-        }
-
-        #notePopup {
-            display: none;
-            position: absolute;
-            right: 0;
-            top: 20%;
-            background-color: yellow;
-            padding: 10px;
-            border: 1px solid #333;
-            font-size: 16px;
-            z-index: 1000;
-            max-width: 200px;
-        }
-
         #speedIndicator, #fontSizeIndicator, #wordsPerLineIndicator {
             position: fixed;
             font-size: 24px;
@@ -219,6 +200,19 @@
             .control-item span { font-size: 10px; }
             #prompterText { font-size: 36px; }
             #speedIndicator, #fontSizeIndicator, #wordsPerLineIndicator { font-size: 18px; }
+            #scrollControls {
+                flex-direction: column;
+                gap: 5px;
+                bottom: 20px;
+            }
+            .scroll-control-button {
+                padding: 5px 10px;
+            }
+            #startButton {
+                font-size: 16px;
+                width: 150px;
+                padding: 8px 20px;
+            }
         }
     </style>
 </head>
@@ -269,6 +263,7 @@
         <div id="scrollControls">
             <button id="increaseSpeedButton" class="scroll-control-button">הגבר קצב</button>
             <button id="decreaseSpeedButton" class="scroll-control-button">האט קצב</button>
+            <button id="scrollBackButton" class="scroll-control-button">גלול לאחור</button>
             <button id="stopButton" class="scroll-control-button">התחל</button>
         </div>
         <div id="speedIndicator">1</div>
@@ -277,9 +272,6 @@
         <button id="exitButton" class="icon-button">X</button>
     </div>
 
-    <div id="notePopup"></div>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const elements = {
@@ -302,7 +294,7 @@
                 increaseSpeedButton: document.getElementById('increaseSpeedButton'),
                 decreaseSpeedButton: document.getElementById('decreaseSpeedButton'),
                 stopButton: document.getElementById('stopButton'),
-                notePopup: document.getElementById('notePopup')
+                scrollBackButton: document.getElementById('scrollBackButton')
             };
 
             let state = {
@@ -328,9 +320,7 @@
                 elements.increaseSpeedButton.addEventListener('click', increaseSpeed);
                 elements.decreaseSpeedButton.addEventListener('click', decreaseSpeed);
                 elements.stopButton.addEventListener('click', toggleScrolling);
-
-                const savedText = localStorage.getItem('teleprompterText');
-                if (savedText) elements.textInput.value = savedText;
+                elements.scrollBackButton.addEventListener('click', scrollBack);
             }
 
             function startPrompter() {
@@ -367,7 +357,6 @@
                 });
 
                 elements.prompterText.innerHTML = formattedText;
-                addNoteEventListeners();
             }
 
             function handleFileUpload(event) {
@@ -433,6 +422,11 @@
                 updateSpeedIndicator();
             }
 
+            function scrollBack() {
+                state.currentPosition = Math.max(0, state.currentPosition - 100); // גלול לאחור 100 פיקסלים
+                elements.prompterText.style.transform = `translateY(-${state.currentPosition}px)`;
+            }
+
             function toggleScrolling() {
                 state.scrolling = !state.scrolling;
                 elements.stopButton.innerText = state.scrolling ? "עצור" : "התחל";
@@ -441,20 +435,6 @@
                 } else {
                     clearInterval(scrollInterval);
                 }
-            }
-
-            function addNoteEventListeners() {
-                const notes = elements.prompterText.querySelectorAll('.note-trigger');
-                notes.forEach(note => {
-                    note.addEventListener('click', function() {
-                        elements.notePopup.innerText = this.dataset.note;
-                        elements.notePopup.style.display = 'block';
-                    });
-                });
-
-                elements.prompterText.addEventListener('click', function() {
-                    elements.notePopup.style.display = 'none';
-                });
             }
 
             addEventListeners();
