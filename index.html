@@ -140,6 +140,33 @@
             word-wrap: break-word;
         }
 
+        .line-number {
+            display: inline-block;
+            width: 40px;
+            text-align: left;
+            font-size: 14px;
+            color: #999;
+        }
+
+        .note-trigger {
+            color: blue;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+        #notePopup {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 20%;
+            background-color: yellow;
+            padding: 10px;
+            border: 1px solid #333;
+            font-size: 16px;
+            z-index: 1000;
+            max-width: 200px;
+        }
+
         #speedIndicator, #fontSizeIndicator, #wordsPerLineIndicator {
             position: fixed;
             font-size: 24px;
@@ -162,7 +189,7 @@
 
         #scrollControls {
             position: fixed;
-            top: 10px;
+            bottom: 10px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
@@ -221,7 +248,7 @@
                     <span>צבע רקע</span>
                 </div>
                 <div class="control-item" title="מילים בשורה">
-                    <input type="number" id="wordsPerLineInput" min="1" max="10" value="4">
+                    <input type="number" id="wordsPerLineInput" min="1" max="10" value="10">
                     <span>מילים בשורה</span>
                 </div>
                 <div class="control-item" title="שמור טקסט">
@@ -242,13 +269,15 @@
         <div id="scrollControls">
             <button id="increaseSpeedButton" class="scroll-control-button">הגבר קצב</button>
             <button id="decreaseSpeedButton" class="scroll-control-button">האט קצב</button>
-            <button id="stopButton" class="scroll-control-button">עצור</button>
+            <button id="stopButton" class="scroll-control-button">התחל</button>
         </div>
         <div id="speedIndicator">1</div>
         <div id="fontSizeIndicator">48px</div>
-        <div id="wordsPerLineIndicator">4 מילים בשורה</div>
+        <div id="wordsPerLineIndicator">10 מילים בשורה</div>
         <button id="exitButton" class="icon-button">X</button>
     </div>
+
+    <div id="notePopup"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
     <script>
@@ -272,15 +301,16 @@
                 exitButton: document.getElementById('exitButton'),
                 increaseSpeedButton: document.getElementById('increaseSpeedButton'),
                 decreaseSpeedButton: document.getElementById('decreaseSpeedButton'),
-                stopButton: document.getElementById('stopButton')
+                stopButton: document.getElementById('stopButton'),
+                notePopup: document.getElementById('notePopup')
             };
 
             let state = {
                 scrollSpeed: 1,
                 fontSize: 48,
-                wordsPerLine: 4,
+                wordsPerLine: 10,
                 currentPosition: 0,
-                scrolling: true
+                scrolling: false
             };
 
             let scrollInterval;
@@ -309,10 +339,10 @@
                 updatePrompterText();
                 updateFontSize(parseInt(elements.fontSizeInput.value, 10));
                 updateWordsPerLine(parseInt(elements.wordsPerLineInput.value, 10));
-                state.scrollSpeed = 1;
                 updateSpeedIndicator();
                 updateColors();
-                updateScrolling();
+                state.currentPosition = 0;
+                elements.prompterText.style.transform = `translateY(0)`;
             }
 
             function stopPrompter() {
@@ -324,12 +354,20 @@
             }
 
             function updatePrompterText() {
-                const words = elements.textInput.value.split(' ');
-                const formattedText = words.reduce((acc, word, idx) => {
-                    acc += word + (idx % state.wordsPerLine === state.wordsPerLine - 1 ? '\n' : ' ');
-                    return acc;
-                }, '');
-                elements.prompterText.innerText = formattedText;
+                const lines = elements.textInput.value.split('\n');
+                let formattedText = '';
+                lines.forEach((line, index) => {
+                    const words = line.split(' ');
+                    const formattedLine = words.reduce((acc, word, idx) => {
+                        acc += word + (idx % state.wordsPerLine === state.wordsPerLine - 1 ? '\n' : ' ');
+                        return acc;
+                    }, '');
+
+                    formattedText += `<span class="line-number">${index + 1}</span> ${formattedLine}\n`;
+                });
+
+                elements.prompterText.innerHTML = formattedText;
+                addNoteEventListeners();
             }
 
             function handleFileUpload(event) {
@@ -397,11 +435,26 @@
 
             function toggleScrolling() {
                 state.scrolling = !state.scrolling;
+                elements.stopButton.innerText = state.scrolling ? "עצור" : "התחל";
                 if (state.scrolling) {
                     updateScrolling();
                 } else {
                     clearInterval(scrollInterval);
                 }
+            }
+
+            function addNoteEventListeners() {
+                const notes = elements.prompterText.querySelectorAll('.note-trigger');
+                notes.forEach(note => {
+                    note.addEventListener('click', function() {
+                        elements.notePopup.innerText = this.dataset.note;
+                        elements.notePopup.style.display = 'block';
+                    });
+                });
+
+                elements.prompterText.addEventListener('click', function() {
+                    elements.notePopup.style.display = 'none';
+                });
             }
 
             addEventListeners();
